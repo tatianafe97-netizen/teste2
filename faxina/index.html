@@ -1,0 +1,519 @@
+<title>Faxina de Resgate</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Layout: uma coluna estreita, uma tela só. Topo = fase + progresso; centro = a missão e o anel do timer; base = Feito / Travei. */
+:root {
+  --bg: #e9efed;
+  --surface: #f6f9f8;
+  --fg: #22313a;
+  --muted: #5f7079;
+  --line: #cfdad7;
+  --accent: #4f8576;
+  --accent-ink: #f4faf8;
+  --soft: #dbe7e3;
+  --panic: #b07a5a;
+  --panic-soft: #f1e3da;
+  --water: #4c7fa0;
+  --water-soft: #dce8f0;
+  --font-display: "Lexend", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #141b1f; --surface: #1b252a; --fg: #dbe5e2; --muted: #93a4a9; --line: #2c3a40;
+    --accent: #86bba9; --accent-ink: #11201b; --soft: #22322f;
+    --panic: #d8a383; --panic-soft: #33261f; --water: #8db8d6; --water-soft: #1d2c37;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #141b1f; --surface: #1b252a; --fg: #dbe5e2; --muted: #93a4a9; --line: #2c3a40;
+  --accent: #86bba9; --accent-ink: #11201b; --soft: #22322f;
+  --panic: #d8a383; --panic-soft: #33261f; --water: #8db8d6; --water-soft: #1d2c37;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body {
+  background: var(--bg); color: var(--fg);
+  font-family: var(--font-body); font-size: 17px; line-height: 1.5;
+}
+#root { min-height: 100%; }
+.app {
+  max-width: 520px; margin: 0 auto; min-height: 100%;
+  display: flex; flex-direction: column; gap: 20px;
+  padding-block: 20px 28px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  box-sizing: border-box;
+}
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+button:disabled { cursor: not-allowed; opacity: .45; }
+
+/* topo */
+.top { display: flex; flex-direction: column; gap: 10px; }
+.top-row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.eyebrow { font-family: var(--font-display); font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.pct { font-family: var(--font-display); font-variant-numeric: tabular-nums; font-size: 13px; color: var(--muted); }
+.bar { height: 8px; border-radius: 99px; background: var(--soft); overflow: hidden; }
+.bar > i { display: block; height: 100%; background: var(--accent); border-radius: 99px; transition: width .6s ease; }
+.phases { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.ph { height: 4px; border-radius: 99px; background: var(--line); }
+.ph.done { background: var(--accent); }
+.ph.now { background: var(--muted); }
+.ph-labels { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; font-size: 11px; color: var(--muted); font-family: var(--font-display); }
+.ph-labels span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ph-labels .cur { color: var(--fg); font-weight: 500; }
+
+/* centro */
+.stage { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; text-align: center; }
+.kind { font-family: var(--font-display); font-size: 13px; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); }
+.kind.panic { color: var(--panic); }
+.kind.water { color: var(--water); }
+.mission {
+  font-family: var(--font-display); font-weight: 400; font-size: clamp(24px, 6.4vw, 32px);
+  line-height: 1.25; text-wrap: balance; margin: 0; max-width: 22ch;
+}
+.hint { color: var(--muted); font-size: 15px; max-width: 34ch; margin: 0; text-wrap: balance; }
+.ring { position: relative; width: 190px; max-width: 100%; aspect-ratio: 1; }
+.ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.ring .track { stroke: var(--soft); fill: none; }
+.ring .arc { fill: none; stroke-linecap: round; transition: stroke-dashoffset .5s linear; }
+.ring .time { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+.ring .digits { font-family: var(--font-display); font-weight: 300; font-size: 44px; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.ring .sub { font-size: 12px; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; font-family: var(--font-display); }
+.ring.over .digits { color: var(--muted); }
+.timer-tools { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.chip {
+  border: 1px solid var(--line); background: transparent; border-radius: 99px;
+  padding: 6px 14px; font-size: 14px; color: var(--muted);
+}
+.chip:hover { color: var(--fg); border-color: var(--muted); }
+
+/* base */
+.actions { display: grid; grid-template-columns: 1fr; gap: 10px; }
+.btn-done {
+  border: 0; border-radius: 18px; padding: 20px; background: var(--accent); color: var(--accent-ink);
+  font-family: var(--font-display); font-weight: 500; font-size: 22px; letter-spacing: .01em;
+}
+.btn-done:hover:not(:disabled) { filter: brightness(1.05); }
+.btn-panic {
+  border: 1.5px solid var(--panic); border-radius: 18px; padding: 14px; background: var(--panic-soft); color: var(--panic);
+  font-family: var(--font-display); font-weight: 500; font-size: 17px;
+}
+.btn-water { background: var(--water); }
+.btn-quiet {
+  border: 0; background: transparent; color: var(--muted); font-size: 15px; padding: 8px;
+  text-decoration: underline; text-underline-offset: 4px; text-decoration-color: var(--line);
+}
+.btn-quiet:hover { color: var(--fg); }
+
+.toast {
+  align-self: center; background: var(--soft); color: var(--fg); border-radius: 99px;
+  padding: 6px 16px; font-size: 14px; font-family: var(--font-display);
+  animation: fade 4s ease forwards;
+}
+@keyframes fade { 0%,80% { opacity: 1 } 100% { opacity: 0 } }
+
+.glass { width: 70px; height: 96px; border: 3px solid var(--water); border-top: 0; border-radius: 0 0 16px 16px; position: relative; overflow: hidden; }
+.glass i { position: absolute; left: 0; right: 0; bottom: 0; background: var(--water-soft); border-top: 3px solid var(--water); transition: height .5s linear; }
+
+/* resumo */
+.summary { display: flex; flex-direction: column; gap: 20px; }
+.summary h1 { font-family: var(--font-display); font-weight: 400; font-size: clamp(26px, 7vw, 34px); line-height: 1.2; margin: 0; text-wrap: balance; }
+.summary .lede { margin: 0; color: var(--muted); }
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 12px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.stat b { font-family: var(--font-display); font-weight: 500; font-size: 22px; font-variant-numeric: tabular-nums; }
+.stat span { font-size: 12px; color: var(--muted); line-height: 1.3; }
+.wins { display: flex; flex-direction: column; gap: 16px; }
+.win-phase h2 { font-family: var(--font-display); font-weight: 500; font-size: 15px; margin: 0 0 6px; display: flex; justify-content: space-between; gap: 10px; }
+.win-phase h2 small { font-weight: 400; color: var(--muted); font-variant-numeric: tabular-nums; }
+.win-phase ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.win-phase li { display: flex; gap: 10px; align-items: baseline; font-size: 15px; }
+.win-phase li::before { content: "✓"; color: var(--accent); font-weight: 700; flex: none; }
+.note { background: var(--soft); border-radius: 14px; padding: 14px 16px; margin: 0; }
+.confirm { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; justify-content: center; font-size: 14px; color: var(--muted); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
+</style>
+
+<div id="root"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.24.7/babel.min.js"></script>
+
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useRef, useCallback } = React;
+
+/* ---------- O plano (o app nunca mostra isto como lista) ---------- */
+const PHASES = [
+  { name: "Emergência sanitária", short: "Sanitária", minutes: 45, tasks: [
+    { t: "Pegue um saco de lixo grande e calce luvas. Só isso.", m: 5, w: "Equipamento na mão" },
+    { t: "Ensaque todo o lixo visível do quarto e da sala. Só o que está à vista.", m: 10, w: "Lixo do quarto e da sala ensacado" },
+    { t: "Limpe todo o xixi do chão: papel-toalha primeiro, depois pano com produto.", m: 10, w: "Xixi do chão limpo" },
+    { t: "Ensaque o lixo visível da cozinha e do banheiro.", m: 5, w: "Lixo da cozinha e do banheiro ensacado" },
+    { t: "Leve toda a louça suja para a pia. Só empilhe. Não lave nada.", m: 10, w: "Louça suja reunida na pia" },
+    { t: "Dê um nó nos sacos de lixo e deixe todos perto da porta.", m: 5, w: "Sacos fechados perto da porta" },
+  ]},
+  { name: "Cama, sofá e roupas", short: "Cama/sofá", minutes: 60, tasks: [
+    { t: "Pegue um cesto, sacola ou lençol velho. Ele vai receber todas as roupas.", m: 5, w: "Cesto de roupas escolhido" },
+    { t: "Tire de cima da cama tudo que não é roupa de cama. Faça uma pilha no chão, num canto.", m: 10, w: "Cama liberada" },
+    { t: "Jogue no cesto todas as roupas que estavam na cama.", m: 5, w: "Roupas da cama no cesto" },
+    { t: "Estique o lençol e jogue o edredom por cima. Não precisa ficar bonito.", m: 5, w: "Cama arrumada do jeito possível" },
+    { t: "Libere o sofá: roupas vão para o cesto, o resto vai para a mesma pilha do canto.", m: 10, w: "Sofá liberado" },
+    { t: "Ande pela casa recolhendo toda roupa do chão para o cesto.", m: 15, w: "Roupas do chão no cesto" },
+    { t: "Recolha as roupas de cadeiras e do banheiro. Todas no mesmo cesto.", m: 10, w: "Todas as roupas num lugar só" },
+  ]},
+  { name: "Banheiro e louça essencial", short: "Banheiro", minutes: 75, tasks: [
+    { t: "Jogue desinfetante dentro do vaso e deixe agir.", m: 5, w: "Desinfetante no vaso" },
+    { t: "Esfregue o vaso por dentro com a escova e dê descarga.", m: 10, w: "Vaso esfregado por dentro" },
+    { t: "Passe pano com produto na tampa, no assento e por fora do vaso.", m: 10, w: "Vaso limpo por fora" },
+    { t: "Limpe a pia do banheiro e a torneira.", m: 10, w: "Pia do banheiro limpa" },
+    { t: "Separe para lavar: 2 pratos, 2 copos, 2 garfos, 1 faca e 1 panela. O resto espera.", m: 5, w: "Louça essencial separada" },
+    { t: "Lave os copos e os talheres que você separou.", m: 10, w: "Copos e talheres lavados" },
+    { t: "Lave os 2 pratos.", m: 10, w: "Pratos lavados" },
+    { t: "Lave a panela.", m: 10, w: "Panela lavada" },
+    { t: "Deixe tudo no escorredor. Não precisa secar.", m: 5, w: "Louça no escorredor" },
+  ]},
+  { name: "Chão", short: "Chão", minutes: 60, tasks: [
+    { t: "Pegue a vassoura e a pá. Comece pelo cômodo mais longe da porta.", m: 5, w: "Vassoura na mão" },
+    { t: "Varra o quarto rápido. Só o meio, sem caçar cantos.", m: 10, w: "Quarto varrido" },
+    { t: "Varra a sala e a cozinha rápido.", m: 15, w: "Sala e cozinha varridas" },
+    { t: "Encha um balde com água e uma tampa de desinfetante.", m: 5, w: "Balde pronto" },
+    { t: "Passe pano no chão do banheiro e da cozinha.", m: 10, w: "Pano no banheiro e na cozinha" },
+    { t: "Passe pano no quarto e na sala, de dentro para fora.", m: 10, w: "Pano no quarto e na sala" },
+    { t: "Despeje a água suja no vaso e guarde o balde.", m: 5, w: "Balde guardado" },
+  ]},
+  { name: "Detalhes", short: "Detalhes", minutes: 60, locked: true, tasks: [
+    { t: "Leve os sacos de lixo para fora de casa.", m: 10, w: "Lixo fora de casa" },
+    { t: "Passe um pano úmido na bancada da cozinha.", m: 10, w: "Bancada limpa" },
+    { t: "Limpe o fogão por cima.", m: 10, w: "Fogão limpo" },
+    { t: "Passe um pano no espelho do banheiro.", m: 5, w: "Espelho limpo" },
+    { t: "Leve o cesto de roupas para perto da máquina ou do tanque.", m: 5, w: "Roupas prontas para lavar" },
+    { t: "Limpe as mesas e superfícies onde você apoia coisas.", m: 10, w: "Superfícies limpas" },
+    { t: "Troque o papel higiênico e a toalha de mão.", m: 5, w: "Banheiro abastecido" },
+    { t: "Apague a luz forte, acenda uma suave e olhe o que você fez.", m: 5, w: "Casa vista com outros olhos" },
+  ]},
+];
+const FLAT = PHASES.flatMap((p, pi) => p.tasks.map((task, ti) => ({ ...task, phase: pi, ti })));
+const TOTAL_MIN = FLAT.reduce((a, x) => a + x.m, 0);
+const BASIC_LAST = FLAT.findIndex(x => x.phase === 4) - 1; // última missão do básico
+
+const PANIC = [
+  "Pegue apenas 5 itens de lixo do chão agora.",
+  "Leve um único copo até a pia.",
+  "Jogue 3 peças de roupa no cesto. Só 3.",
+  "Encoste a mão em 3 coisas fora do lugar. Não precisa mover.",
+  "Dobre uma única meia. Uma.",
+  "Diga em voz alta: \"só uma coisinha\". Depois pegue 1 papel do chão.",
+  "Abra a torneira, molhe as mãos e feche.",
+  "Fique em pé no meio do cômodo e conte até 20.",
+  "Coloque 1 objeto no saco de lixo. Qualquer um que seja lixo.",
+  "Empurre uma coisa do chão para debaixo do sofá. Hoje vale.",
+  "Ajeite uma almofada. Só uma.",
+  "Beba 3 goles de água e volte.",
+];
+
+const MIN = 60000;
+const BREAK_EVERY = 45 * MIN;
+const BREAK_LEN = 5 * MIN;
+const KEY = "faxina-resgate-v1";
+
+const startTimer = (minutes) => ({ duration: minutes * MIN, remaining: minutes * MIN, endAt: Date.now() + minutes * MIN, chimed: false });
+const timeLeft = (tm, now) => tm.endAt ? tm.endAt - now : tm.remaining;
+
+const fresh = () => ({
+  mode: "task", idx: 0, panicText: "", lastPanic: -1,
+  timer: startTimer(FLAT[0].m),
+  done: [], panicWins: [], breaks: 0,
+  workMs: 0, sinceBreakMs: 0, prevMode: "task", toast: null, finished: false,
+});
+
+function load() {
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (!raw) return fresh();
+    const s = JSON.parse(raw);
+    if (typeof s.idx !== "number" || !s.timer) return fresh();
+    return { ...s, toast: null };
+  } catch (e) { return fresh(); }
+}
+
+/* ---------- som suave ---------- */
+let audioCtx = null;
+function unlockAudio() {
+  try { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === "suspended") audioCtx.resume(); } catch (e) {}
+}
+function chime() {
+  try {
+    if (!audioCtx) return;
+    [523.25, 659.25].forEach((f, i) => {
+      const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.type = "sine"; o.frequency.value = f;
+      const t0 = audioCtx.currentTime + i * 0.35;
+      g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(0.18, t0 + 0.05); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 1.4);
+      o.connect(g).connect(audioCtx.destination); o.start(t0); o.stop(t0 + 1.5);
+    });
+  } catch (e) {}
+}
+
+const fmt = (ms) => {
+  const neg = ms < 0; ms = Math.abs(ms);
+  const s = Math.floor(ms / 1000) + (neg ? 0 : (ms % 1000 ? 1 : 0));
+  const mm = Math.floor(s / 60), ss = s % 60;
+  return (neg ? "+" : "") + mm + ":" + String(ss).padStart(2, "0");
+};
+const fmtDur = (ms) => {
+  const m = Math.round(ms / MIN);
+  if (m < 60) return m + " min";
+  return Math.floor(m / 60) + "h" + (m % 60 ? String(m % 60).padStart(2, "0") : "");
+};
+
+/* ---------- componentes ---------- */
+function Ring({ tm, now, color, label }) {
+  const left = timeLeft(tm, now);
+  const frac = Math.max(0, Math.min(1, left / tm.duration));
+  const r = 84, c = 2 * Math.PI * r;
+  const over = left <= 0;
+  return (
+    <div className={"ring" + (over ? " over" : "")} role="timer" aria-label={"Tempo restante " + fmt(Math.max(0, left))}>
+      <svg viewBox="0 0 190 190">
+        <circle className="track" cx="95" cy="95" r={r} strokeWidth="8" />
+        <circle className="arc" cx="95" cy="95" r={r} strokeWidth="8" stroke={color}
+          strokeDasharray={c} strokeDashoffset={c * (1 - frac)} />
+      </svg>
+      <div className="time">
+        <span className="digits">{over ? fmt(left) : fmt(left)}</span>
+        <span className="sub">{over ? "tempo extra" : (tm.endAt ? label : "pausado")}</span>
+      </div>
+    </div>
+  );
+}
+
+function Summary({ s, onResume, onReset }) {
+  const [confirm, setConfirm] = useState(false);
+  const doneSet = new Set(s.done);
+  const doneMin = s.done.reduce((a, i) => a + FLAT[i].m, 0);
+  const byPhase = PHASES.map((p, pi) => ({
+    p, items: FLAT.map((x, i) => ({ x, i })).filter(({ x, i }) => x.phase === pi && doneSet.has(i)),
+  })).filter(g => g.items.length);
+  const headline = s.finished
+    ? "Você terminou as 5 horas. A casa respira, e você também."
+    : s.done.length === 0 && s.panicWins.length === 0
+      ? "Você abriu o app e tentou. Isso conta."
+      : "Você parou com dignidade. Olha o que você já fez.";
+  return (
+    <div className="summary">
+      <span className="eyebrow">Resumo da noite</span>
+      <h1>{headline}</h1>
+      <div className="stats">
+        <div className="stat"><b>{fmtDur(s.workMs)}</b><span>de faxina de verdade</span></div>
+        <div className="stat"><b>{s.done.length}</b><span>missões concluídas</span></div>
+        <div className="stat"><b>{Math.round((doneMin / TOTAL_MIN) * 100)}%</b><span>do plano total</span></div>
+      </div>
+      {byPhase.length > 0 && (
+        <div className="wins">
+          {byPhase.map(({ p, items }) => (
+            <section className="win-phase" key={p.name}>
+              <h2>{p.name}<small>{items.length === p.tasks.length ? "completa" : items.length + " de " + p.tasks.length}</small></h2>
+              <ul>{items.map(({ x, i }) => <li key={i}>{x.w}</li>)}</ul>
+            </section>
+          ))}
+        </div>
+      )}
+      {(s.panicWins.length > 0 || s.breaks > 0) && (
+        <p className="lede">
+          {s.panicWins.length > 0 && <>Você travou {s.panicWins.length} {s.panicWins.length === 1 ? "vez" : "vezes"} e destravou todas. </>}
+          {s.breaks > 0 && <>Fez {s.breaks} {s.breaks === 1 ? "pausa" : "pausas"} para beber água.</>}
+        </p>
+      )}
+      <p className="note">
+        {s.finished
+          ? "Agora é banho, água e cama. O resto da vida pode esperar até amanhã."
+          : "O que ficou pode esperar até amanhã. Beba um copo de água, tire as luvas e vá descansar."}
+      </p>
+      {!s.finished && <button className="btn-done" onClick={onResume}>Na verdade, quero continuar</button>}
+      <div className="confirm">
+        {!confirm
+          ? <button className="btn-quiet" onClick={() => setConfirm(true)}>Começar outra faxina do zero</button>
+          : <>Apagar este progresso?
+              <button className="chip" onClick={onReset}>Sim, recomeçar</button>
+              <button className="chip" onClick={() => setConfirm(false)}>Não</button></>}
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  const [s, setS] = useState(load);
+  const [now, setNow] = useState(Date.now());
+  const last = useRef(Date.now());
+
+  // relógio + contagem do tempo trabalhado
+  useEffect(() => {
+    const id = setInterval(() => {
+      const t = Date.now(); const dt = Math.min(t - last.current, 5000); last.current = t;
+      setNow(t);
+      setS(prev => {
+        let n = prev;
+        const working = (prev.mode === "task" || prev.mode === "panic") && prev.timer.endAt;
+        if (working) n = { ...n, workMs: n.workMs + dt, sinceBreakMs: n.sinceBreakMs + dt };
+        if (prev.timer.endAt && !prev.timer.chimed && t >= prev.timer.endAt && prev.mode !== "summary") {
+          chime();
+          n = { ...n, timer: { ...n.timer, chimed: true } };
+        }
+        return n;
+      });
+    }, 500);
+    return () => clearInterval(id);
+  }, []);
+
+  // salvar no navegador
+  useEffect(() => { try { localStorage.setItem(KEY, JSON.stringify(s)); } catch (e) {} }, [s]);
+
+  // liberar som no primeiro toque + manter a tela acesa
+  useEffect(() => {
+    let lock = null;
+    const ask = async () => { try { if (navigator.wakeLock && document.visibilityState === "visible") lock = await navigator.wakeLock.request("screen"); } catch (e) {} };
+    const first = () => { unlockAudio(); ask(); };
+    window.addEventListener("pointerdown", first);
+    document.addEventListener("visibilitychange", ask);
+    ask();
+    return () => { window.removeEventListener("pointerdown", first); document.removeEventListener("visibilitychange", ask); try { lock && lock.release(); } catch (e) {} };
+  }, []);
+
+  const act = useCallback(fn => setS(prev => fn(prev)), []);
+
+  const done = () => act(p => {
+    if (p.mode === "panic") {
+      return { ...p, mode: "task", panicWins: [...p.panicWins, p.panicText], timer: startTimer(FLAT[p.idx].m),
+        toast: { id: Date.now(), text: "Destravou. Agora a missão de antes, com tempo novo." } };
+    }
+    const doneList = [...p.done, p.idx];
+    const next = p.idx + 1;
+    if (next >= FLAT.length) return { ...p, done: doneList, mode: "summary", finished: true, timer: { ...p.timer, endAt: null } };
+    let toast = null;
+    if (FLAT[next].phase !== FLAT[p.idx].phase) {
+      toast = { id: Date.now(), text: next - 1 === BASIC_LAST
+        ? "O básico acabou. Fase 5 desbloqueada."
+        : "Fase " + (FLAT[p.idx].phase + 1) + " concluída." };
+    }
+    if (p.sinceBreakMs >= BREAK_EVERY) {
+      return { ...p, done: doneList, idx: next, mode: "break", timer: startTimer(BREAK_LEN / MIN), toast };
+    }
+    return { ...p, done: doneList, idx: next, timer: startTimer(FLAT[next].m), toast };
+  });
+
+  const panic = () => act(p => {
+    let k; do { k = Math.floor(Math.random() * PANIC.length); } while (k === p.lastPanic && PANIC.length > 1);
+    return { ...p, mode: "panic", panicText: PANIC[k], lastPanic: k, timer: startTimer(2), toast: null };
+  });
+
+  const endBreak = () => act(p => ({ ...p, mode: "task", breaks: p.breaks + 1, sinceBreakMs: 0, timer: startTimer(FLAT[p.idx].m),
+    toast: { id: Date.now(), text: "Água no corpo. Próxima missão." } }));
+
+  const togglePause = () => act(p => {
+    const tm = p.timer;
+    if (tm.endAt) return { ...p, timer: { ...tm, remaining: tm.endAt - Date.now(), endAt: null } };
+    return { ...p, timer: { ...tm, endAt: Date.now() + tm.remaining } };
+  });
+
+  const addFive = () => act(p => {
+    const tm = p.timer, t = Date.now();
+    if (tm.endAt) return { ...p, timer: { ...tm, endAt: Math.max(t, tm.endAt) + 5 * MIN, duration: Math.max(t, tm.endAt) + 5 * MIN - (tm.endAt - tm.duration), chimed: false } };
+    return { ...p, timer: { ...tm, remaining: Math.max(0, tm.remaining) + 5 * MIN, duration: tm.duration + 5 * MIN, chimed: false } };
+  });
+
+  const endDignity = () => act(p => ({ ...p, prevMode: p.mode, mode: "summary",
+    timer: p.timer.endAt ? { ...p.timer, remaining: p.timer.endAt - Date.now(), endAt: null } : p.timer }));
+
+  const resume = () => act(p => ({ ...p, mode: p.prevMode === "summary" ? "task" : p.prevMode,
+    timer: { ...p.timer, endAt: Date.now() + Math.max(p.timer.remaining, 60000) } }));
+
+  const reset = () => { last.current = Date.now(); setS(fresh()); };
+
+  /* ---------- tela ---------- */
+  const cur = FLAT[Math.min(s.idx, FLAT.length - 1)];
+  const doneMin = s.done.reduce((a, i) => a + FLAT[i].m, 0);
+  const pct = Math.round((doneMin / TOTAL_MIN) * 100);
+  const phaseDone = PHASES.map((p, pi) => FLAT.every((x, i) => x.phase !== pi || s.done.includes(i)));
+  const basicDone = phaseDone.slice(0, 4).every(Boolean);
+
+  const Top = (
+    <header className="top">
+      <div className="top-row">
+        <span className="eyebrow">Fase {cur.phase + 1} de 5 · {PHASES[cur.phase].name}</span>
+        <span className="pct">{pct}%</span>
+      </div>
+      <div className="bar" role="progressbar" aria-valuenow={pct} aria-valuemin="0" aria-valuemax="100" aria-label="Progresso geral"><i style={{ width: pct + "%" }} /></div>
+      <div className="phases" aria-hidden="true">
+        {PHASES.map((p, i) => <span key={i} className={"ph" + (phaseDone[i] ? " done" : i === cur.phase ? " now" : "")} />)}
+      </div>
+      <div className="ph-labels" aria-hidden="true">
+        {PHASES.map((p, i) => <span key={i} className={i === cur.phase ? "cur" : ""}>{p.locked && !basicDone ? "🔒 " : ""}{p.short}</span>)}
+      </div>
+    </header>
+  );
+
+  if (s.mode === "summary") {
+    return <main className="app"><Summary s={s} onResume={resume} onReset={reset} /></main>;
+  }
+
+  const over = timeLeft(s.timer, now) <= 0;
+
+  if (s.mode === "break") {
+    const left = timeLeft(s.timer, now);
+    const frac = 1 - Math.max(0, Math.min(1, left / s.timer.duration));
+    return (
+      <main className="app">
+        {Top}
+        <section className="stage">
+          <span className="kind water">Pausa obrigatória · 5 min</span>
+          <h1 className="mission">Vá beber um copo de água inteiro. Sente um pouco.</h1>
+          <div className="glass" aria-hidden="true"><i style={{ height: (100 - frac * 85) + "%" }} /></div>
+          <Ring tm={s.timer} now={now} color="var(--water)" label="de pausa" />
+          <p className="hint">{over ? "Pausa feita. Quando quiser, volte." : "Você trabalhou 45 minutos. O botão libera quando a pausa terminar."}</p>
+        </section>
+        <div className="actions">
+          <button className="btn-done btn-water" disabled={!over} onClick={endBreak}>{over ? "Bebi. Voltar à missão" : "Bebendo água…"}</button>
+          <button className="btn-quiet" onClick={endDignity}>Encerrar com dignidade</button>
+        </div>
+      </main>
+    );
+  }
+
+  const isPanic = s.mode === "panic";
+  return (
+    <main className="app">
+      {Top}
+      {s.toast && <div className="toast" key={s.toast.id} role="status">{s.toast.text}</div>}
+      <section className="stage">
+        <span className={"kind" + (isPanic ? " panic" : "")}>
+          {isPanic ? "Missão de destravar · 2 min" : "Missão · " + cur.m + " min"}
+        </span>
+        <h1 className="mission">{isPanic ? s.panicText : cur.t}</h1>
+        <Ring tm={s.timer} now={now} color={isPanic ? "var(--panic)" : "var(--accent)"} label="restantes" />
+        <div className="timer-tools">
+          <button className="chip" onClick={togglePause}>{s.timer.endAt ? "Pausar" : "Continuar"}</button>
+          {over && <button className="chip" onClick={addFive}>+5 min</button>}
+        </div>
+        {over && <p className="hint">O tempo acabou, e está tudo bem. Se terminou, toque em Feito. Se não, continue no seu ritmo.</p>}
+      </section>
+      <div className="actions">
+        <button className="btn-done" onClick={done}>Feito!</button>
+        {!isPanic && <button className="btn-panic" onClick={panic}>Travei</button>}
+        <button className="btn-quiet" onClick={endDignity}>Encerrar com dignidade</button>
+      </div>
+    </main>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
