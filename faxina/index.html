@@ -60,13 +60,12 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 .pct { font-family: var(--font-display); font-variant-numeric: tabular-nums; font-size: 13px; color: var(--muted); }
 .bar { height: 8px; border-radius: 99px; background: var(--soft); overflow: hidden; }
 .bar > i { display: block; height: 100%; background: var(--accent); border-radius: 99px; transition: width .6s ease; }
-.phases, .ph-labels { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.phases { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
 .ph { height: 4px; border-radius: 99px; background: var(--line); }
 .ph.done { background: var(--accent); }
 .ph.now { background: var(--muted); }
-.ph-labels { font-size: 11px; color: var(--muted); font-family: var(--font-display); }
-.ph-labels span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: flex; align-items: center; gap: 3px; }
-.ph-labels .cur { color: var(--fg); font-weight: 500; }
+.ph.locked { background: repeating-linear-gradient(90deg, var(--line) 0 5px, transparent 5px 9px); }
+.lockline { display: flex; align-items: center; gap: 6px; margin: 0; font-family: var(--font-display); font-size: 12px; color: var(--muted); }
 .lock { width: 10px; height: 10px; flex: none; }
 
 /* centro */
@@ -187,7 +186,7 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 <script type="text/babel" data-presets="react">
 const { useState, useEffect, useRef } = React;
 
-/* ---------- O plano: 3h40 de missões + pausas de água = 4h. O app nunca mostra isto como lista. ---------- */
+/* ---------- O plano: 4h35 de missões + pausas de água = 5h. O app nunca mostra isto como lista. ---------- */
 const PHASES = [
   {
     name: "Emergência sanitária", short: "Sanitária",
@@ -414,6 +413,69 @@ const PHASES = [
     ],
   },
   {
+    name: "Armário e roupas", short: "Armário", locked: true,
+    panic: [
+      "Dobre uma única camiseta. Mal dobrada vale.",
+      "Pendure uma peça no cabide. Uma.",
+      "Tire 3 peças da prateleira e jogue na cama.",
+      "Coloque um par de meias na gaveta.",
+      "Jogue uma peça no saco de roupa suja.",
+    ],
+    tasks: [
+      { t: "Prepare a arrumação do armário.", m: 5,
+        steps: [
+          "Traga o cesto de roupas para o quarto, perto da cama",
+          "Pegue 2 sacos vazios: um para roupa suja e um para doação",
+          "Tire os cabides vazios do armário e deixe em cima da cama",
+          "Abra as portas do armário e acenda a luz do quarto",
+        ],
+        tip: "Regra da noite: uma prateleira de cada vez. Nunca esvazie o armário inteiro.",
+        w: "Arrumação do armário preparada" },
+      { t: "Separe o cesto: roupa limpa ou suja.", m: 10,
+        steps: [
+          "Pegue uma peça do cesto por vez",
+          "Suja vai para o saco de roupa suja. Lençol e fronhas também",
+          "Limpa vai para a cama, em pilhas: de cima, de baixo, de dormir, íntimas e meias",
+        ],
+        tip: "Na dúvida se está limpa, está suja. Vai para lavar e acabou.",
+        w: "Cesto separado entre limpa e suja" },
+      { t: "Arrume o armário: primeira rodada.", m: 15,
+        steps: [
+          "Esvazie a prateleira (ou gaveta) mais alta em cima da cama",
+          "Rasgou ou manchou: lixo. Não serve: doação. Pensou mais de 3 segundos? Fica",
+          "Não é roupa? Caixa do Depois",
+          "Dobra rápida (ao meio e ao meio de novo), guarde e desça para a próxima",
+        ],
+        tip: "Quando o timer tocar, termine só a prateleira em que você está.",
+        w: "Primeira rodada no armário" },
+      { t: "Arrume o armário: segunda rodada.", m: 10,
+        steps: [
+          "Continue da prateleira onde você parou",
+          "Mesmas regras: lixo, doação, Caixa do Depois ou fica",
+          "Gavetas: meias, roupas íntimas e de dormir entram sem dobrar",
+        ],
+        tip: "Feito é melhor que perfeito. Ninguém vai fiscalizar a sua gaveta.",
+        w: "Segunda rodada no armário" },
+      { t: "Guarde o que ficou em cima da cama.", m: 10,
+        steps: [
+          "Pendure o que amassa: camisas, calças de tecido e casacos",
+          "O resto: dobra rápida e para a pilha do mesmo tipo",
+          "Meias, roupas íntimas e de dormir: na gaveta, sem dobrar",
+          "Sobrou coisa? Volta para o cesto, ao lado do armário. A cama precisa ficar livre",
+        ],
+        tip: "Pendurar é mais rápido que dobrar. Cabide sobrando? Use.",
+        w: "Roupas limpas guardadas e cama livre" },
+      { t: "Feche os sacos do armário.", m: 5,
+        steps: [
+          "Dê um nó no saco de doação e deixe ao lado da Caixa do Depois",
+          "Leve o saco de roupa suja para perto da máquina ou do tanque",
+          "Feche as portas do armário",
+        ],
+        tip: "A doação não precisa sair de casa hoje. Só precisa estar fechada.",
+        w: "Doação fechada e roupa suja na lavanderia" },
+    ],
+  },
+  {
     name: "Detalhes", short: "Detalhes", locked: true,
     panic: [
       "Passe o pano em um único canto da bancada.",
@@ -482,14 +544,21 @@ const MIN = 60000;
 const TOTAL_MIN = FLAT.reduce((a, x) => a + x.m, 0);
 const BREAK_EVERY = 45 * MIN;
 const BREAK_MIN = 5;
-const KEY = "faxina-resgate-v2";
+const NO_BREAK_IF_LEFT = 15 * MIN; // perto do fim, não interrompe para pausa
+const PLAN_LABEL = "5h";
+const KEY = "faxina-resgate-v3";
+const OLD_KEY = "faxina-resgate-v2";
+const BASIC_COUNT = FLAT.findIndex((x) => x.phase === 4); // missões das fases 1 a 4
+const WARDROBE_COUNT = PHASES[4].tasks.length;
+const OLD_LEN = BASIC_COUNT + PHASES[5].tasks.length; // tamanho do plano de 4h
 const MODES = ["task", "panic", "break", "summary"];
 
 const PHASE_DONE_MSG = [
   "Fase 1 feita. A emergência acabou.",
   "Fase 2 feita. Cama e sofá livres.",
   "Fase 3 feita. Banheiro e louça.",
-  "O básico acabou. Fase 5 liberada.",
+  "O básico acabou. Armário liberado.",
+  "Armário feito. Só faltam os detalhes.",
 ];
 const CHEERS = ["Mais uma.", "Isso aí.", "Andou.", "Seguindo.", "Boa. Próxima.", "Conta como vitória.", "Uma de cada vez."];
 
@@ -511,14 +580,40 @@ function fresh() {
   };
 }
 
+const valid = (s) => !!s && Number.isInteger(s.idx) && s.idx >= 0 && s.idx < FLAT.length && !!s.timer && MODES.includes(s.mode) && Array.isArray(s.done);
+const nextUndone = (done, from) => {
+  for (let i = from; i < FLAT.length; i++) if (!done.includes(i)) return i;
+  return -1;
+};
+const workLeft = (done, from) => FLAT.reduce((a, x, i) => (i >= from && !done.includes(i) ? a + x.m * MIN : a), 0);
+
+// progresso salvo pela versão de 4h: fases 1 a 4 iguais; os detalhes agora vêm depois do armário
+function fromV2(old) {
+  if (!old || !Number.isInteger(old.idx) || old.idx < 0 || old.idx >= OLD_LEN || !old.timer || !MODES.includes(old.mode)) return null;
+  const shift = (i) => (i < BASIC_COUNT ? i : i + WARDROBE_COUNT);
+  const done = (Array.isArray(old.done) ? old.done : []).filter((i) => Number.isInteger(i) && i >= 0 && i < OLD_LEN).map(shift);
+  const s = { ...fresh(), ...old, done, toast: null };
+  if (old.idx < BASIC_COUNT) return s;
+  const idx = BASIC_COUNT; // estava nos detalhes: entra no armário
+  if (old.mode === "summary") return { ...s, idx, checks: [], finished: false, prevMode: "task", timer: { ...startTimer(FLAT[idx].m), endAt: null } };
+  if (old.mode === "break") return { ...s, idx, checks: [] };
+  return { ...s, idx, checks: [], mode: "task", panicLevel: 1, timer: startTimer(FLAT[idx].m) };
+}
+
 function load() {
   try {
     const raw = localStorage.getItem(KEY);
-    if (!raw) return fresh();
-    const s = JSON.parse(raw);
-    if (!s || typeof s.idx !== "number" || s.idx < 0 || s.idx >= FLAT.length || !s.timer || !MODES.includes(s.mode)) return fresh();
-    return { ...fresh(), ...s, toast: null };
-  } catch (e) { return fresh(); }
+    if (raw) {
+      const s = JSON.parse(raw);
+      if (valid(s)) return { ...fresh(), ...s, toast: null };
+    }
+    const old = localStorage.getItem(OLD_KEY);
+    if (old) {
+      const migrated = fromV2(JSON.parse(old));
+      if (migrated) return migrated;
+    }
+  } catch (e) {}
+  return fresh();
 }
 
 /* ---------- som suave ---------- */
@@ -564,10 +659,10 @@ const fmtClock = (ts) => {
 function estimateEnd(s, now) {
   const left = Math.max(0, timeLeft(s.timer, now));
   const fromIdx = s.mode === "task" ? s.idx + 1 : s.idx;
-  const rest = FLAT.slice(fromIdx).reduce((a, x) => a + x.m * MIN, 0);
-  const work = rest + (s.mode === "break" ? 0 : left);
+  const work = workLeft(s.done, fromIdx) + (s.mode === "break" ? 0 : left);
   const since = s.mode === "break" ? 0 : s.sinceBreakMs;
-  const breaks = Math.max(0, Math.floor((since + work - 1) / BREAK_EVERY));
+  let breaks = 0;
+  for (let at = Math.max(0, BREAK_EVERY - since); at <= work - NO_BREAK_IF_LEFT; at += BREAK_EVERY) breaks++;
   return now + (s.mode === "break" ? left : 0) + work + breaks * BREAK_MIN * MIN;
 }
 
@@ -640,7 +735,7 @@ function Summary({ s, onResume, onReset }) {
       <div className="stats">
         <div className="stat"><b>{fmtDur(s.workMs)}</b><span>de faxina de verdade</span></div>
         <div className="stat"><b>{s.done.length}</b><span>{s.done.length === 1 ? "missão concluída" : "missões concluídas"}</span></div>
-        <div className="stat"><b>{pct}%</b><span>do plano de 4h</span></div>
+        <div className="stat"><b>{pct}%</b><span>do plano de {PLAN_LABEL}</span></div>
       </div>
       {groups.length > 0 && (
         <div className="wins">
@@ -658,7 +753,13 @@ function Summary({ s, onResume, onReset }) {
           {s.breaks > 0 && <>Fez {s.breaks} {s.breaks === 1 ? "pausa" : "pausas"} para beber água.</>}
         </p>
       )}
-      {doneSet.has(0) && <p className="lede">A Caixa do Depois guarda as decisões de hoje. Ela pode esperar fechada por uma semana.</p>}
+      {doneSet.has(0) && (
+        <p className="lede">
+          {s.done.some((i) => FLAT[i].phase === 4)
+            ? "A Caixa do Depois e o saco de doação guardam as decisões de hoje. Os dois podem esperar fechados por uma semana."
+            : "A Caixa do Depois guarda as decisões de hoje. Ela pode esperar fechada por uma semana."}
+        </p>
+      )}
       <p className="note">
         {s.finished
           ? "Agora é banho, água e cama. O resto da vida pode esperar até amanhã."
@@ -676,10 +777,17 @@ function Summary({ s, onResume, onReset }) {
   );
 }
 
-function App() {
-  const [s, setS] = useState(load);
+function App({ initial }) {
+  const [s, setS] = useState(() => initial || load());
   const [now, setNow] = useState(() => Date.now());
   const last = useRef(Date.now());
+  const stateRef = useRef(s);
+  stateRef.current = s;
+
+  // se o app for atualizado com ele aberto, o progresso passa direto para a nova versão
+  useEffect(() => {
+    try { window.claude?.hot?.snapshot?.(() => ({ state: stateRef.current })); } catch (e) {}
+  }, []);
 
   // relógio + tempo trabalhado (conta só com o timer rodando)
   useEffect(() => {
@@ -738,14 +846,16 @@ function App() {
         toast: note("Destravou. Agora só o próximo passo.") };
     }
     const doneList = p.done.includes(p.idx) ? p.done : [...p.done, p.idx];
-    const next = p.idx + 1;
-    if (next >= FLAT.length) {
+    const next = nextUndone(doneList, p.idx + 1);
+    if (next === -1) {
       return { ...p, done: doneList, mode: "summary", prevMode: "task", finished: true, timer: { ...p.timer, endAt: null, remaining: 0 } };
     }
     const phaseEnd = FLAT[next].phase !== FLAT[p.idx].phase;
     const msg = phaseEnd ? PHASE_DONE_MSG[FLAT[p.idx].phase] : CHEERS[p.cheer % CHEERS.length];
     const base = { ...p, done: doneList, idx: next, checks: [], cheer: p.cheer + 1, toast: note(msg) };
-    if (p.sinceBreakMs >= BREAK_EVERY) return { ...base, mode: "break", timer: startTimer(BREAK_MIN) };
+    if (p.sinceBreakMs >= BREAK_EVERY && workLeft(doneList, next) >= NO_BREAK_IF_LEFT) {
+      return { ...base, mode: "break", timer: startTimer(BREAK_MIN) };
+    }
     return { ...base, timer: startTimer(FLAT[next].m) };
   });
 
@@ -799,20 +909,18 @@ function App() {
   const Top = (
     <header className="top">
       <div className="top-row">
-        <span className="eyebrow">Fase {cur.phase + 1} de 5 · {PHASES[cur.phase].name}</span>
+        <span className="eyebrow">Fase {cur.phase + 1} de {PHASES.length} · {PHASES[cur.phase].name}</span>
         <span className="pct">{pct}% · fim ~{fmtClock(estimateEnd(s, now))}</span>
       </div>
       <div className="bar" role="progressbar" aria-valuenow={pct} aria-valuemin="0" aria-valuemax="100" aria-label="Progresso geral">
         <i style={{ width: pct + "%" }} />
       </div>
       <div className="phases" aria-hidden="true">
-        {PHASES.map((p, i) => <span key={i} className={"ph" + (phaseDone[i] ? " done" : i === cur.phase ? " now" : "")} />)}
-      </div>
-      <div className="ph-labels" aria-hidden="true">
         {PHASES.map((p, i) => (
-          <span key={i} className={i === cur.phase ? "cur" : ""}>{p.locked && !basicDone && <Lock />}{p.short}</span>
+          <span key={i} className={"ph" + (phaseDone[i] ? " done" : i === cur.phase ? " now" : p.locked && !basicDone ? " locked" : "")} />
         ))}
       </div>
+      {!basicDone && <p className="lockline"><Lock />Armário e detalhes liberam quando o básico acabar</p>}
     </header>
   );
   const Toast = s.toast && <div className="toast" key={s.toast.id} role="status">{s.toast.text}</div>;
@@ -873,5 +981,12 @@ function App() {
   );
 }
 
-ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+let root = null;
+function start(data) {
+  let initial = null;
+  try { if (data && valid(data.state)) initial = { ...fresh(), ...data.state, toast: null }; } catch (e) {}
+  if (!root) root = ReactDOM.createRoot(document.getElementById("root"));
+  root.render(<App key={Date.now()} initial={initial} />);
+}
+window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
 </script>
