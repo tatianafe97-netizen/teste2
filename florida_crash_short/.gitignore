@@ -1,0 +1,7 @@
+.venv/
+build/
+__pycache__/
+*.pyc
+# drop-in photos are usually licensed (AP/Reuters): keep them out of git
+assets/*
+!assets/README.md
