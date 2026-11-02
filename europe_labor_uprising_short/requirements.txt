@@ -1,0 +1,7 @@
+# Core (required)
+numpy>=1.24
+Pillow>=10.0
+# Narration backends (optional; tried in order: edge-tts -> gTTS -> music-only)
+edge-tts>=6.1
+gTTS>=2.5
+# System dependency: ffmpeg + ffprobe on PATH (libx264 + aac)
