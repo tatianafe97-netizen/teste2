@@ -1,0 +1,6 @@
+.venv/
+build/
+cache/
+__pycache__/
+assets/*
+!assets/README.md

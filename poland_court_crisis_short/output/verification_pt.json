@@ -1,0 +1,21 @@
+{
+  "file": "poland_crisis_short_pt.mp4",
+  "size_mb": 7.18,
+  "width": 1080,
+  "height": 1920,
+  "fps": 30.0,
+  "duration_s": 50.0,
+  "video_codec": "h264",
+  "audio_codec": "aac",
+  "integrated_loudness_lufs": -16.0,
+  "checks": {
+    "resolution 1080x1920": true,
+    "aspect 9:16": true,
+    "30 fps": true,
+    "duration ~50s": true,
+    "H.264 video": true,
+    "AAC audio present": true,
+    "yuv420p": true
+  },
+  "passed": true
+}
