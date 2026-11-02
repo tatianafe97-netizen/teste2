@@ -1,0 +1,7 @@
+edge-tts>=7.0
+pillow>=10.0
+matplotlib>=3.8
+numpy>=1.26
+scipy>=1.11
+# FFmpeg (ffmpeg + ffprobe) must be installed on the system PATH.
+# Optional, only for tools/build_geodata.py: shapely>=2.0
