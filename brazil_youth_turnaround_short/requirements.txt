@@ -1,0 +1,6 @@
+edge-tts>=7.0
+Pillow>=10.0
+numpy>=1.26
+scipy>=1.11
+matplotlib>=3.8
+# moviepy is not required: frames are piped straight into the system ffmpeg binary.
