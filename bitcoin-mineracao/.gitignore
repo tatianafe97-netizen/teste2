@@ -1,7 +1,10 @@
-# vídeos e legendas gerados
+# vídeos, legendas e áudios gerados
 *.mp4
 *.webm
 *.srt
+narracao-preview.wav
+# modelos de voz (baixados à parte, ~350 MB)
+modelos/
 node_modules/
 package-lock.json
 package.json

@@ -9,7 +9,7 @@
  * mesmo em máquinas lentas.
  *
  * Requisitos: Node 18+, ffmpeg no PATH e Playwright (npm i playwright && npx playwright install chromium)
- * Uso:        node exportar-video.js [saida.mp4] [--sem-batida] [--crf=18]
+ * Uso:        node exportar-video.js [saida.mp4] [--sem-voz] [--sem-batida] [--crf=18]
  */
 const { chromium } = require('playwright');
 const { spawn } = require('child_process');
@@ -21,6 +21,7 @@ const { pathToFileURL } = require('url');
 const args = process.argv.slice(2);
 const out = path.resolve(args.find(a => !a.startsWith('--')) || 'mineracao-bitcoin-9x16-60fps.mp4');
 const music = !args.includes('--sem-batida');
+const voice = !args.includes('--sem-voz');
 const crf = (args.find(a => a.startsWith('--crf=')) || '--crf=18').split('=')[1];
 const page_url = pathToFileURL(path.join(__dirname, 'index.html')).href + '?export=1';
 
@@ -45,7 +46,7 @@ function srtTime(t) {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'mineracao-'));
   const wav = path.join(tmp, 'trilha.wav');
   process.stdout.write('Renderizando áudio offline… ');
-  fs.writeFileSync(wav, Buffer.from(await page.evaluate(m => window.__mining.renderAudioOffline(m), music), 'base64'));
+  fs.writeFileSync(wav, Buffer.from(await page.evaluate(([m, v]) => window.__mining.renderAudioOffline(m, v), [music, voice]), 'base64'));
   console.log('ok');
 
   const srt = out.replace(/\.[^.]+$/, '') + '.srt';
