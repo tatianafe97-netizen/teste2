@@ -1,0 +1,7 @@
+# vídeos e legendas gerados
+*.mp4
+*.webm
+*.srt
+node_modules/
+package-lock.json
+package.json
