@@ -320,7 +320,7 @@ function createAudioFX() {
       const fl = ac.createBiquadFilter(); fl.type = 'bandpass'; fl.Q.value = 0.9;
       fl.frequency.setValueAtTime(300, w); fl.frequency.linearRampToValueAtTime(1300, w + dur);
       const g = ac.createGain(); g.gain.setValueAtTime(0.0001, w); g.gain.exponentialRampToValueAtTime(0.06, w + 0.6);
-      g.gain.linearRampToValueAtTime(0.2, w + dur - 0.3); g.gain.exponentialRampToValueAtTime(0.0001, w + dur);
+      g.gain.linearRampToValueAtTime(0.13, w + dur - 0.3); g.gain.exponentialRampToValueAtTime(0.0001, w + dur);
       s.connect(fl); fl.connect(g); g.connect(sfx); s.start(w); s.stop(w + dur + 0.1);
       const o = ac.createOscillator(); o.type = 'sawtooth';
       o.frequency.setValueAtTime(48, w); o.frequency.linearRampToValueAtTime(95, w + dur);
@@ -333,11 +333,11 @@ function createAudioFX() {
       noise({ when: w, dur, gain: 0.1, type: 'lowpass', f: 700, Q: 0.5, attack: 1 });
       for (let i = 0; i < dur * 14; i++) {
         const o = Math.random() * dur;
-        noise({ when: w + o, dur: 0.015 + Math.random() * 0.03, gain: 0.06 + Math.random() * 0.1, type: 'highpass', f: 1500 + Math.random() * 3000, attack: 0.001 });
+        noise({ when: w + o, dur: 0.015 + Math.random() * 0.03, gain: 0.04 + Math.random() * 0.06, type: 'highpass', f: 2500 + Math.random() * 3000, attack: 0.001 });
       }
     },
-    alarm(w) { tone({ type: 'square', f: 880, when: w, dur: 0.18, gain: 0.06 }); tone({ type: 'square', f: 660, when: w + 0.2, dur: 0.18, gain: 0.06 }); },
-    clock(w) { tone({ type: 'square', f: 3000, when: w, dur: 0.02, gain: 0.05, attack: 0.001 }); },
+    alarm(w) { tone({ type: 'square', f: 880, when: w, dur: 0.16, gain: 0.032, filter: { type: 'lowpass', f: 2500 } }); tone({ type: 'square', f: 660, when: w + 0.2, dur: 0.16, gain: 0.032, filter: { type: 'lowpass', f: 2500 } }); },
+    clock(w) { tone({ type: 'triangle', f: 2600, when: w, dur: 0.02, gain: 0.035, attack: 0.001 }); },
     ratchet(w) { for (let i = 0; i < 7; i++) S.tick(w + i * 0.035, 1500 + i * 120); S.swoosh(w, 0.25); },
     neon(w) { tone({ type: 'sawtooth', f: 60, when: w, dur: 0.35, gain: 0.12, filter: { type: 'lowpass', f: 900 } }); tone({ type: 'square', f: 120, when: w + 0.05, dur: 0.1, gain: 0.05 }); },
     glitch(w) { for (let i = 0; i < 5; i++) S.bip(w + i * 0.03, 300 + Math.random() * 2500, 0.025, 0.07); },
@@ -468,9 +468,9 @@ function buildTimeline() {
   at(K.gastam, 'thud', 0.6); at(K.gastam, 'fire', e4 - K.gastam); shake(K.gastam, 10, 0.4);
   at(K.cidades, 'pop', 1.1); at(K.cidades + 0.1, 'zap', 0.4);
   at(K.corrida, 'clank', 0.8); at(K.corrida + 0.02, 'pop', 0.9); shake(K.corrida, 14, 0.35);
-  for (let tt = K.maquinas + 0.6 * s4rise(); tt < e4 - 0.2; tt += 0.45) at(tt, 'alarm');
+  for (let tt = K.maquinas + 0.6 * s4rise(); tt < Math.min(e4 - 0.2, K.dez - 0.6); tt += 0.45) at(tt, 'alarm');
   at(K.dez - 0.1, 'pop', 1.2);
-  for (let tt = K.dez; tt < e4 - 0.05; tt += 0.125) at(tt, 'clock');
+  for (let tt = K.dez; tt < e4 - 0.05; tt += 0.25) at(tt, 'clock');
 
   /* CENA 5 — prova de trabalho e corrente */
   const s5 = SS(4);
