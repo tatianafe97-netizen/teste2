@@ -4,10 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>O Que É Comunismo? · Shorts 9:16</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&display=swap">
 <style>
   :root { --bg:#0a0a0a; --panel:#1c1c1e; --ink:#f4f1ea; --yellow:#FFD60A; --red:#FF3B30; }
   * { box-sizing:border-box; margin:0; padding:0; }
-  html, body { height:100%; background:var(--bg); color:var(--ink); font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif; overflow:hidden; }
+  html, body { height:100%; background:var(--bg); color:var(--ink); font-family:"Montserrat",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif; overflow:hidden; }
   #app { height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; padding:10px 16px; }
   #stage { position:relative; height:min(calc(100vh - 76px), calc((100vw - 32px) * 16 / 9)); aspect-ratio:9/16; border-radius:16px; overflow:hidden; box-shadow:0 24px 70px rgba(0,0,0,.65), 0 0 0 1px #262626; background:#121212; }
   #cv { width:100%; height:100%; display:block; }
@@ -16,17 +19,17 @@
   #overlay h1 { font-weight:900; font-size:clamp(22px,4.6vh,46px); line-height:1.02; }
   #overlay h1 span { color:var(--yellow); }
   #overlay p { opacity:.72; font-size:clamp(11px,1.6vh,15px); max-width:30ch; line-height:1.4; }
-  #startBtn { font:900 clamp(15px,2.4vh,22px)/1 system-ui,sans-serif; padding:1em 1.6em; border:0; border-radius:999px; background:var(--yellow); color:#111; cursor:pointer; box-shadow:0 7px 0 #a88c00, 0 14px 30px rgba(255,214,10,.25); animation:pulse 1.4s ease-in-out infinite; }
+  #startBtn { font:900 clamp(15px,2.4vh,22px)/1 "Montserrat",system-ui,sans-serif; padding:1em 1.6em; border:0; border-radius:999px; background:var(--yellow); color:#111; cursor:pointer; box-shadow:0 7px 0 #a88c00, 0 14px 30px rgba(255,214,10,.25); animation:pulse 1.4s ease-in-out infinite; }
   #startBtn:active { transform:translateY(5px); box-shadow:0 2px 0 #a88c00; }
   @keyframes pulse { 50% { transform:scale(1.06); } }
   #recBadge { position:absolute; top:14px; left:50%; transform:translateX(-50%); background:var(--red); color:#fff; font:800 12px system-ui,sans-serif; padding:6px 12px; border-radius:999px; display:none; }
   #controls { display:flex; flex-wrap:wrap; gap:8px 14px; align-items:center; justify-content:center; font-size:13px; min-height:34px; }
-  #controls button { font:700 13px system-ui,sans-serif; padding:8px 14px; border-radius:999px; border:1px solid #333; background:var(--panel); color:var(--ink); cursor:pointer; }
+  #controls button { font:700 13px "Montserrat",system-ui,sans-serif; padding:8px 14px; border-radius:999px; border:1px solid #333; background:var(--panel); color:var(--ink); cursor:pointer; }
   #controls button:hover { border-color:#555; }
   #controls button:disabled { opacity:.4; cursor:not-allowed; }
   #controls label { display:flex; gap:6px; align-items:center; cursor:pointer; user-select:none; opacity:.9; }
   #controls input { accent-color:var(--yellow); }
-  #controls select { font:600 13px system-ui,sans-serif; padding:6px 8px; border-radius:8px; border:1px solid #333; background:var(--panel); color:var(--ink); }
+  #controls select { font:600 13px "Montserrat",system-ui,sans-serif; padding:6px 8px; border-radius:8px; border:1px solid #333; background:var(--panel); color:var(--ink); }
   .hidden { display:none !important; }
 </style>
 </head>
@@ -60,7 +63,7 @@ const W = 1080, H = 1920, DURATION = 48;
 const cv = document.getElementById('cv');
 const ctx = cv.getContext('2d');
 const TAU = Math.PI * 2;
-const FONT = '"Arial Black","Segoe UI Black","Helvetica Neue",Helvetica,Arial,sans-serif';
+const FONT = '"Montserrat","Arial Black","Segoe UI Black","Helvetica Neue",Helvetica,Arial,sans-serif';
 const C = {
   bg: '#121212', ink: '#F4F1EA', dark: '#151515', panel: '#2C2C2E', panel2: '#3A3A3C',
   yellow: '#FFD60A', red: '#FF3B30', green: '#30D158', blue: '#0A84FF', cyan: '#64D2FF',
@@ -1592,6 +1595,46 @@ function frame(now) {
   render(t);
 }
 
+/* ---------- Mixagem offline da trilha completa (voz + efeitos + batida) ----------
+   Usada por tools/renderizar_mp4.js para exportar o MP4 quadro a quadro. Retorna WAV 16 bits em base64. */
+async function mixOffline(sr = 48000) {
+  const saved = { ctx: AU.ctx, out: AU.out, sfx: AU.sfx, music: AU.music, voice: AU.voice, noise: AU.noise };
+  const oc = new OfflineAudioContext(2, Math.round(sr * DURATION), sr);
+  const comp = oc.createDynamicsCompressor();
+  comp.threshold.value = -14; comp.knee.value = 8; comp.ratio.value = 4; comp.attack.value = .003; comp.release.value = .15;
+  Object.assign(AU, { ctx: oc, out: oc.createGain(), sfx: oc.createGain(), music: oc.createGain(), voice: oc.createGain() });
+  const voiceOn = !!NARRATION;
+  AU.out.gain.value = .9; AU.sfx.gain.value = voiceOn ? .55 : .85; AU.music.gain.value = voiceOn ? .16 : .3; AU.voice.gain.value = 1.15;
+  AU.sfx.connect(AU.out); AU.music.connect(AU.out); AU.voice.connect(AU.out); AU.out.connect(comp); comp.connect(oc.destination);
+  const nb = oc.createBuffer(1, sr * 2, sr), nd = nb.getChannelData(0);
+  for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
+  AU.noise = nb;
+  if (voiceOn) {
+    const bin = atob(NARRATION.audio), u8 = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+    const vb = await new Promise((res, rej) => oc.decodeAudioData(u8.buffer, res, rej));
+    const src = oc.createBufferSource(); src.buffer = vb; src.connect(AU.voice); src.start(0);
+  }
+  for (const [t, fn] of CUES) fn(t);
+  for (let i = 0; i * .5 < BEAT_END; i++) beatAt(i, i * .5);
+  const buf = await oc.startRendering();
+  Object.assign(AU, saved); // devolve o grafo de áudio ao vivo
+  const L = buf.getChannelData(0), R = buf.getChannelData(1), n = L.length;
+  const wav = new DataView(new ArrayBuffer(44 + n * 4));
+  const str = (o, x) => { for (let i = 0; i < x.length; i++) wav.setUint8(o + i, x.charCodeAt(i)); };
+  str(0, 'RIFF'); wav.setUint32(4, 36 + n * 4, true); str(8, 'WAVEfmt '); wav.setUint32(16, 16, true);
+  wav.setUint16(20, 1, true); wav.setUint16(22, 2, true); wav.setUint32(24, sr, true); wav.setUint32(28, sr * 4, true);
+  wav.setUint16(32, 4, true); wav.setUint16(34, 16, true); str(36, 'data'); wav.setUint32(40, n * 4, true);
+  for (let i = 0, o = 44; i < n; i++, o += 4) {
+    wav.setInt16(o, Math.max(-1, Math.min(1, L[i])) * 32767, true);
+    wav.setInt16(o + 2, Math.max(-1, Math.min(1, R[i])) * 32767, true);
+  }
+  const bytes = new Uint8Array(wav.buffer);
+  let b64 = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) b64 += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  return btoa(b64);
+}
+
 /* ---------- Gravação do vídeo (canvas 60fps + áudio sintético) ---------- */
 let recorder = null, chunks = [], recMime = '';
 async function startRecording() {
@@ -1643,9 +1686,11 @@ window.addEventListener('keydown', e => {
 makeFlags();
 Voice.init();
 window.renderAt = render; // útil para gerar miniaturas / depuração
+window.mixOffline = mixOffline;
 const hashT = /t=([\d.]+)/.exec(location.hash);
 if (hashT) { overlay.classList.add('hidden'); render(Math.min(DURATION - .001, parseFloat(hashT[1]))); }
 else render(2.35);
+if (document.fonts) document.fonts.load('900 76px Montserrat').then(() => { if (!state.running) render(hashT ? Math.min(DURATION - .001, parseFloat(hashT[1])) : 2.35); }).catch(() => {});
 requestAnimationFrame(frame);
 </script>
 </body>

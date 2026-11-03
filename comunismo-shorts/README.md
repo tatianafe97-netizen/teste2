@@ -5,6 +5,7 @@ Animação minimalista com bonequinhos palito, em **HTML5 Canvas + JavaScript pu
 - **Formato:** 9:16, canvas interno de 1080×1920, renderizado a cada `requestAnimationFrame` (60 fps em telas de 60 Hz)
 - **Duração:** 48 s, em loop contínuo (o último quadro volta para a escova de dentes da Cena 1)
 - **Legendas:** página curta no centro-inferior da tela, com a palavra atual destacada em amarelo
+- **Fonte:** Montserrat (Google Fonts); sem internet, usa Arial Black ou a fonte do sistema
 - **Áudio:** todos os efeitos são sintetizados com a Web Audio API: pop, swoosh, engrenagens, caixa registradora, alarme, impacto, raio-X, cadeado, evaporação, sino e uma batida de fundo
 - **Narração:** uma voz neural pt-BR já vem gravada dentro do `index.html` (MP3 em base64, cerca de 375 KB). Ela toca pela Web Audio API, em sincronia com as animações, e entra na gravação do vídeo. No seletor "Narração" também dá para usar a voz do navegador (Web Speech API) ou desligar a voz.
 
@@ -27,9 +28,20 @@ Clique em **▶ Iniciar Animação**. O clique é necessário para o navegador l
 
 ## Gerar o arquivo de vídeo
 
+### MP4 quadro a quadro (recomendado)
+
+```bash
+npm i playwright && npx playwright install chromium   # uma vez
+node tools/renderizar_mp4.js comunismo-shorts.mp4
+```
+
+O script abre a página num Chromium sem janela e desenha os 2.880 quadros (48 s × 60 fps) um a um. Também mixa a trilha completa (voz gravada, efeitos e batida) com um `OfflineAudioContext` e junta tudo no `ffmpeg`, gerando H.264 + AAC em 1080×1920. Como nada depende de tempo real, não há quadros perdidos nem atraso entre som e imagem. Precisa do `ffmpeg` instalado.
+
+### Gravação em tempo real (WebM)
+
 O botão **⏺ Gravar vídeo** reinicia a animação, grava o canvas a 60 fps junto com os efeitos sonoros (MediaRecorder) e, ao final dos 48 s, baixa o arquivo `comunismo-shorts-1080x1920.webm`. No Chrome, o resultado é VP9 + Opus.
 
-Para converter em MP4 (H.264/AAC) antes de subir:
+Para converter esse WebM em MP4:
 
 ```bash
 ffmpeg -i comunismo-shorts-1080x1920.webm -r 60 -c:v libx264 -pix_fmt yuv420p -crf 18 -c:a aac -b:a 192k comunismo-shorts.mp4
@@ -86,4 +98,4 @@ O `index.html` está dividido em 7 seções comentadas:
 4. Objetos (fábrica, engrenagens, pirâmide, cadeado, prédio do Estado, balança, bandeiras...)
 5. Cenas 1–3 (`sceneN` desenha a cena, `camN` define a câmera virtual)
 6. Cenas 4–6
-7. Motor: screen shake (`SHAKES`), transições (`CUTS`), legendas, lista de efeitos sonoros (`CUES`), batida, loop principal e gravação
+7. Motor: screen shake (`SHAKES`), transições (`CUTS`), legendas, lista de efeitos sonoros (`CUES`), batida, voz gravada (`Narr`), mixagem offline (`mixOffline`), loop principal e gravação
